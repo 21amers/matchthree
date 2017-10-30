@@ -10,7 +10,8 @@
 #include <string>
 #include <vector>
 #include <memory>
-
+#include <algorithm>
+#include <stdint.h>
 #include "WICTextureLoader.h"
 
 #include "matchThree.h"
@@ -519,8 +520,8 @@ void UpdateRender(float dt)
 	t_int32 mPosIndexX = (t_int32)(mouseX - mouseCursor->GetScale2D().x*6) / (t_int32)mouseCursor->GetScale2D().x;
 	t_int32 mPosIndexY = (t_int32)(mouseY- mouseCursor->GetScale2D().y) / (t_int32)mouseCursor->GetScale2D().y;
 
-	mPosIndexX = clamp<t_int32>((t_int32)0, (t_int32) HORIZONTALTILES, mPosIndexX);
-	mPosIndexY = clamp <t_int32>((t_int32)0, (t_int32)VERTICALTILES, mPosIndexY);
+	mPosIndexX = clamp <t_int32>((t_int32)0, (t_int32)HORIZONTALTILES - 1, mPosIndexX);
+	mPosIndexY = clamp <t_int32>((t_int32)0, (t_int32)VERTICALTILES-1, mPosIndexY);
 
 	if (levelTiles[mPosIndexX][mPosIndexY]->IsPlayable())
 	{
