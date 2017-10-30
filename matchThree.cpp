@@ -101,10 +101,12 @@ LRESULT CALLBACK WindowProc(
 	switch (msg)
 	{
 	case WM_DESTROY:
+	case WM_CLOSE:
 	{
 		PostQuitMessage(0);
 		return 0;
-	}break;
+	}
+
 	case WM_SIZE:
 	{
 		RECT window;
@@ -632,7 +634,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 				break;
 			}
 
-		}	//Render a frame
+		}	
 		
 		mouseDown = 0;
 		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0)
