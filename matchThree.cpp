@@ -20,17 +20,17 @@
 #pragma comment(lib,"d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
-
 #define SCREENWIDTH 1440
 #define SCREENHEIGHT 1024
 
-#define GRIDWIDTH 800
-#define GRIDHEIGHT 800
+#define GRIDWIDTH (SCREENWIDTH * .55f)
+#define GRIDHEIGHT (SCREENHEIGHT * .78f)
 
 #define COMPILESHADERDEBUG 1
 
 #define GRIDLEFT 400
 #define GRIDTOP 100
+
 #define HORIZONTALTILES 8
 #define VERTICALTILES 8
 
@@ -407,9 +407,6 @@ void InitD3D(HWND hwnd)
 	dBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 	device->CreateTexture2D(&dBufferDesc, NULL, &pDepthBuffer);
 
-	D3D11_VIEWPORT viewport;
-	ZeroMemory(&viewport, sizeof(D3D11_VIEWPORT));
-
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsv;
 	ZeroMemory(&dsv, sizeof(dsv));
 
@@ -418,7 +415,9 @@ void InitD3D(HWND hwnd)
 
 	device->CreateDepthStencilView(pDepthBuffer, &dsv, &stencilView);
 	pDepthBuffer->Release();
-
+	
+	D3D11_VIEWPORT viewport;
+	ZeroMemory(&viewport, sizeof(D3D11_VIEWPORT));
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
 	viewport.MinDepth = 0;
@@ -520,7 +519,8 @@ void UpdateRender(float dt)
 	t_int32 mPosIndexX = (t_int32)(mouseX - mouseCursor->GetScale2D().x*6) / (t_int32)mouseCursor->GetScale2D().x;
 	t_int32 mPosIndexY = (t_int32)(mouseY- mouseCursor->GetScale2D().y) / (t_int32)mouseCursor->GetScale2D().y;
 
-
+	mPosIndexX = clamp<t_int32>((t_int32)0, (t_int32) HORIZONTALTILES, mPosIndexX);
+	mPosIndexY = clamp <t_int32>((t_int32)0, (t_int32)VERTICALTILES, mPosIndexY);
 
 	if (levelTiles[mPosIndexX][mPosIndexY]->IsPlayable())
 	{
@@ -584,14 +584,17 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	//Registser the window
 	RegisterClassEx(&wc);
 
-	RECT wr= {0,0,500,400 };
+	RECT wr = { 0,0,SCREENWIDTH,SCREENHEIGHT };    // set the size, but not the position
+	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
 	wnd = CreateWindowEx(
 		NULL,
 		L"WindClass",
 		L"MatchThree",
 		WS_OVERLAPPEDWINDOW,
-		300, 50,SCREENWIDTH, SCREENHEIGHT,
+		0, 0,
+		wr.right-wr.left,
+		wr.bottom- wr.top,
 		NULL,
 		NULL,
 		hInstance,
@@ -615,11 +618,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	perfCountFrequency = (LONG)s_frequency.QuadPart;
 	float dt = 0;
 	
-	RECT window;
-	GetClientRect(wnd, &window);
-
-	screenRect = FLOAT2(((t_float32)window.right - window.left),(t_float32)(window.bottom - window.top));
-
 	while (TRUE)
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, TRUE))
@@ -666,7 +664,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		{
 			mouseY = SCREENHEIGHT;
 		}
-
 		
 		UpdateRender(.03f);
 
