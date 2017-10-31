@@ -91,6 +91,8 @@ D3D11_INPUT_ELEMENT_DESC inputDesc[] =
 
 static_assert((sizeof(CBUFFER) % 16) == 0, "Constant Buffer size must be 16-byte aligned");
 
+void ResizeBuffers(FLOAT2 screenSize);
+
 LRESULT CALLBACK WindowProc(
 	HWND hwnd,
 	UINT msg,
@@ -114,12 +116,45 @@ LRESULT CALLBACK WindowProc(
 
 		screenRect = FLOAT2(((t_float32)window.right - window.left), (t_float32)(window.bottom - window.top));
 
+		ResizeBuffers(screenRect);
+
 	}break;
 	}
 
 	return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
+
+void ResizeBuffers(FLOAT2 screenSize)
+{
+	if (backBuffer)
+	{
+		context->OMSetRenderTargets(0, 0, 0);
+
+		backBuffer->Release();
+
+		context->Flush();
+	
+		swapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+
+		ID3D11Texture2D *buffer;
+		swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&buffer);
+
+	    device->CreateRenderTargetView(buffer, NULL, &backBuffer);
+		buffer->Release();
+		
+		D3D11_VIEWPORT vport;
+		vport.Height = screenSize.y;
+		vport.Width = screenSize.x;
+		vport.MinDepth = 0;
+		vport.MaxDepth = 1.0f;
+		vport.TopLeftX = 0;
+		vport.TopLeftY = 0;
+
+		context->OMSetRenderTargets(1, &backBuffer, NULL);
+		context->RSSetViewports(1, &vport);
+	}
+}
 
 void InitShaders()
 {
@@ -173,6 +208,7 @@ FLOAT2 PositionOnTile(t_int32 xscale, t_int32 yscale, t_float32 gap, t_int32 win
 {
 	if (windex < 0)
 		windex = 0;
+
 	if (windex >= VERTICALTILES)
 		windex = VERTICALTILES-1;
 
@@ -183,7 +219,7 @@ FLOAT2 PositionOnTile(t_int32 xscale, t_int32 yscale, t_float32 gap, t_int32 win
 		hindex = HORIZONTALTILES-1;
 
 	hindex = 7 - hindex;
-	t_float32 offset = (t_float32)(xscale / 2.0f + (gap*windex));
+	t_float32 offset =  (t_float32)(xscale / 2.0f + (gap*windex));
 	t_float32 x = ((t_float32)(xscale * windex));
 
 	t_float32 yoffset = (t_float32)(yscale / 2 + (gap* hindex));
@@ -241,24 +277,7 @@ void StartLevel()
 		///add game tile
 		std::shared_ptr<gameObject> go = AddGameObject(tileWidth, tileHeight, 270.0f, gap, w, h, hourglassLevel[i], (w + h) % 5 + 5, drawLayer::go);
 		levelTiles[w][h] = go;
-
-		///STOPPED HERE ... 
-		//Next steps :
-		//need to have mouse clicks and selection
-		//move a tile and shift places with another
-		//discover combos and tripple pairs
-		//fonts and letters
-		//Destroy and enable more items
-		//
-
-		//I need text soon 
-		//animation?
-		//sort game objects by render layer
-		//selection method in shader??
-
-
 	}
-
 	
 	FLOAT2 cursorPos = PositionOnTile(tileHeight, tileHeight, gap, 0, 0);
 	mouseCursor = std::make_shared<gameObject>();
@@ -480,7 +499,7 @@ void UpdateRender(float dt)
 {
 	wchar_t buffer[256];
 	wsprintf(buffer, L"mouseX: %d   mouseY: %d  down%d\n", mouseX, mouseY,mouseDown);
-	OutputDebugString(buffer);
+//	OutputDebugString(buffer);
 
 	const float color[] =  { 0.0f, 0.2f, 0.4f, 1.0f };
 	context->ClearRenderTargetView(backBuffer, color);
@@ -501,7 +520,7 @@ void UpdateRender(float dt)
 	
 	//projection
 	//projMatrix = DirectX::XMMatrixPerspectiveFovLH(DirectX::XMConvertToRadians(45), (t_float32)SCREENWIDTH / (t_float32)SCREENHEIGHT, 0.1f, 100);
-	projMatrix = DirectX::XMMatrixOrthographicLH((t_float32)SCREENWIDTH, (t_float32)SCREENHEIGHT, 0.1f, 100.0f);
+	projMatrix = DirectX::XMMatrixOrthographicLH((t_float32)screenRect.x, (t_float32)screenRect.y, 0.1f, 100.0f);
 	
 	DirectX::XMFLOAT4 light = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
@@ -518,12 +537,21 @@ void UpdateRender(float dt)
 	context->IASetIndexBuffer(piBuffer, DXGI_FORMAT_R32_UINT, 0);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	///MOUSE is off 
-	t_int32 mPosIndexX = (t_int32)(mouseX - mouseCursor->GetScale2D().x*6) / (t_int32)mouseCursor->GetScale2D().x;
-	t_int32 mPosIndexY = (t_int32)(mouseY- mouseCursor->GetScale2D().y) / (t_int32)mouseCursor->GetScale2D().y;
 
-	mPosIndexX = clamp <t_int32>((t_int32)0, (t_int32)HORIZONTALTILES - 1, mPosIndexX);
-	mPosIndexY = clamp <t_int32>((t_int32)0, (t_int32)VERTICALTILES-1, mPosIndexY);
+	///MOUSE is off 
+	t_int32 leftGridSide = screenRect.x / 2 - (GRIDHEIGHT / 2);
+	t_int32 topGrid = screenRect.y / 2 - (GRIDHEIGHT / 2);
+
+	t_int32 mXIndex = mouseX / leftGridSide;
+		t_int32 mYIndex = mouseY / topGrid;
+
+	t_int32 mPosIndexX = clamp <t_int32>((t_int32)0, (t_int32)HORIZONTALTILES - 1, mXIndex);
+	t_int32 mPosIndexY = clamp <t_int32>((t_int32)0, (t_int32)VERTICALTILES - 1, mYIndex);
+
+
+	wsprintf(buffer, L"leftGrid: %d  topgripdY: %d  , mousex: %d mousey %d MindexX:%d mIndexY %d   \n", leftGridSide, topGrid, mouseX, mouseY, mPosIndexX, mPosIndexY);
+	OutputDebugString(buffer);
+
 
 	if (levelTiles[mPosIndexX][mPosIndexY]->IsPlayable())
 	{
@@ -633,7 +661,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 			{
 				break;
 			}
-
 		}	
 		
 		mouseDown = 0;
