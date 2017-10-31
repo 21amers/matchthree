@@ -520,7 +520,7 @@ void UpdateRender(float dt)
 	
 	//projection
 	//projMatrix = DirectX::XMMatrixPerspectiveFovLH(DirectX::XMConvertToRadians(45), (t_float32)SCREENWIDTH / (t_float32)SCREENHEIGHT, 0.1f, 100);
-	projMatrix = DirectX::XMMatrixOrthographicLH((t_float32)screenRect.x, (t_float32)screenRect.y, 0.1f, 100.0f);
+	projMatrix = DirectX::XMMatrixOrthographicLH(screenRect.x, screenRect.y, 0.1f, 100.0f);
 	
 	DirectX::XMFLOAT4 light = DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
 
@@ -537,19 +537,17 @@ void UpdateRender(float dt)
 	context->IASetIndexBuffer(piBuffer, DXGI_FORMAT_R32_UINT, 0);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-
-	///MOUSE is off 
-	t_int32 leftGridSide = screenRect.x / 2 - (GRIDHEIGHT / 2);
-	t_int32 topGrid = screenRect.y / 2 - (GRIDHEIGHT / 2);
-
-	t_int32 mXIndex = mouseX / leftGridSide;
-		t_int32 mYIndex = mouseY / topGrid;
-
-	t_int32 mPosIndexX = clamp <t_int32>((t_int32)0, (t_int32)HORIZONTALTILES - 1, mXIndex);
-	t_int32 mPosIndexY = clamp <t_int32>((t_int32)0, (t_int32)VERTICALTILES - 1, mYIndex);
+	XMFLOAT3 mouseTemp;
+	XMMATRIX world = DirectX::XMMatrixScaling(1.0f, 1.f, 1.f) * DirectX::XMMatrixRotationRollPitchYawFromVector(XMQuaternionIdentity()) * DirectX::XMMatrixIdentity();
+	XMVECTOR mouseVector =DirectX::XMVector3Unproject(DirectX::XMVectorSet(mouseX, mouseY, 1,1), 0, 0, screenRect.x, screenRect.y, 0.1f, 100.0f, projMatrix, viewMatrix,DirectX::XMMatrixIdentity());
+	XMStoreFloat3(&mouseTemp, mouseVector);
 
 
-	wsprintf(buffer, L"leftGrid: %d  topgripdY: %d  , mousex: %d mousey %d MindexX:%d mIndexY %d   \n", leftGridSide, topGrid, mouseX, mouseY, mPosIndexX, mPosIndexY);
+	t_int32 mPosIndexX = clamp <t_int32>((t_int32)0, (t_int32)HORIZONTALTILES - 1, 0);
+	t_int32 mPosIndexY = clamp <t_int32>((t_int32)0, (t_int32)VERTICALTILES - 1, 0);
+
+
+	wsprintf(buffer, L"mousex: %d mousey %d X %d  Y %d   \n",  mouseX, mouseY, (t_int32)mouseTemp.x, (t_int32)mouseTemp.y);
 	OutputDebugString(buffer);
 
 
