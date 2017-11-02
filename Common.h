@@ -46,6 +46,18 @@ enum drawLayer
 	ui,
 };
 
+
+inline FLOAT2 operator+(FLOAT2 a, FLOAT2 b)
+{
+	return FLOAT2(a.x + b.x, a.y + b.y);
+}
+
+inline FLOAT2 operator-(FLOAT2 a, FLOAT2 b)
+{
+	return FLOAT2(a.x - b.x, a.y - b.y);
+}
+
+
 //convert this to spritesheet
 static std::wstring textureResources[] =
 {

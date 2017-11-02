@@ -15,31 +15,42 @@ public:
 	void SetPosition2D(t_float32 x, t_float32 y);
 	void SetRotation2D(t_float32 x, t_float32 y);
 	void SetScale2D(t_float32 x, t_float32 y);
-	void SetTextureRef(std::wstring tex);
 	
-	RECT GetBounds() { return boundingBox; }
-	FLOAT2 GetRotation2D() { return orientation2D; }
-	FLOAT2 GetPosition2D() { return position2D; }
-	FLOAT2 GetScale2D() { return scale2D; }
-	const wchar_t* GetTextureRef() { return texture.c_str(); }
-	void SetDrawLayer(drawLayer layer) { tag = layer; }
-	void SetPlayable(t_int32 playable) { isPlayable = playable; }
-	t_int32 IsPlayable() { return isPlayable; }
+	void SetTileIndex(t_int32 x, t_int32 y) { xTileIndex = x; yTileIndex = y; }
+	void SetTargetTileIndex(t_int32 x, t_int32 y) { targetxTileIndex = x; targetyTileindex = y; }
+	void SetTextureRef(std::wstring tex) { texture = tex; };
 	void Update(t_float32 dt);
+
+	const wchar_t* GetTextureRef() { return texture.c_str(); }
+	
+	t_int32 xTileIndex;
+	t_int32 yTileIndex;
+
+	t_int32 targetIsSet;
+	FLOAT2 targetVector;
+
+	t_int32 targetxTileIndex;
+	t_int32 targetyTileindex;
+
+	t_int32 selected;
+	t_int32 isPlayable;
+	t_int32 zposition;
+
+	drawLayer tag;
+	std::wstring texture;
+
+	FLOAT2 orientation2D;
+	FLOAT2 scale2D;
+	FLOAT2 position2D;
 
 private:
 	RECT boundingBox;
-	FLOAT2 position2D;
-	FLOAT2 orientation2D;
-	FLOAT2 scale2D;
-
+	
 	FLOAT3 position;
 	FLOAT3 orientation;
 	FLOAT3 scale;
+
 	
-	t_int32 isPlayable;
-	t_int32 zposition;
-	drawLayer tag;
-	std::wstring texture;
+
 };
 

@@ -38,6 +38,7 @@
 using namespace DirectX;
 t_int64 mouseX = 0, mouseY = 0;
 t_int64 mouseDown = 0;
+t_int32 mouseWasDownLastFrame = 0;
 
 ID3D11Device *device;
 ID3D11DeviceContext *context;
@@ -72,14 +73,17 @@ FLOAT2 screenRect;
 std::vector<std::shared_ptr<gameObject>> gameObjects;
 std::shared_ptr<gameObject> levelTiles[8][8];
 std::shared_ptr<gameObject> mouseCursor;
+std::shared_ptr<gameObject> selectedTile;
 
 struct CBUFFER
 {
-	DirectX::XMFLOAT4X4 world;
-	DirectX::XMFLOAT4X4 rotation;
-	DirectX::XMFLOAT4 light;
-	DirectX::XMFLOAT4 lightColor;
-	DirectX::XMFLOAT4 ambientColor;
+	DirectX::XMFLOAT4X4 world; //4*4*4 = 64
+	DirectX::XMFLOAT4X4 rotation; //4*4*4 =64
+	DirectX::XMFLOAT4 light; //4*4 =16
+	DirectX::XMFLOAT4 lightColor; //4*4 = 16
+	DirectX::XMFLOAT4 ambientColor; //4*4 =16
+	DirectX::XMFLOAT3 padding;
+	int selected;
 };
 
 D3D11_INPUT_ELEMENT_DESC inputDesc[] =
@@ -160,7 +164,7 @@ void InitShaders()
 {
 	ID3D10Blob *vsBlob, *psBlob, *error;
 	//load
-	D3DCompileFromFile(L"shaders.shader",0,0, "VShader", "vs_4_0", COMPILESHADERDEBUG, 0, &vsBlob, &error);
+	HRESULT h =D3DCompileFromFile(L"shaders.shader",0,0, "VShader", "vs_4_0", COMPILESHADERDEBUG, 0, &vsBlob, &error);
 
 	D3DCompileFromFile(L"shaders.shader", 0, 0, "PShader", "ps_4_0", COMPILESHADERDEBUG, 0, &psBlob, &error);
 
@@ -173,14 +177,13 @@ void InitShaders()
 	context->PSSetShader(pShader, 0, 0);
 
 	device->CreateInputLayout(inputDesc, 3, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &pLayout);
-	
 	context->IASetInputLayout(pLayout);
 	
 	//constant buffer World matrix
 	D3D11_BUFFER_DESC cdesc2;
 	ZeroMemory(&cdesc2, sizeof(cdesc2));
 	cdesc2.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	cdesc2.ByteWidth = 176;
+	cdesc2.ByteWidth = sizeof(CBUFFER);
 	cdesc2.Usage = D3D11_USAGE_DEFAULT;
 
 	device->CreateBuffer(&cdesc2, NULL, &cBufferWorld);
@@ -203,7 +206,6 @@ void LoadTextures()
 		}
 	}
 }
-
 
 FLOAT2 PositionOnTile(t_int32 xscale, t_int32 yscale, t_float32 gap, t_int32 windex, t_int32 hindex)
 {
@@ -232,6 +234,23 @@ FLOAT2 PositionOnTile(t_int32 xscale, t_int32 yscale, t_float32 gap, t_int32 win
 	return FLOAT2(leftSide + x + offset, top + y + yoffset);
 }
 
+void SwapTiles(gameObject *a, gameObject *b)
+{
+	gameObject c = *a;
+
+	a->SetTargetTileIndex(b->xTileIndex, b->yTileIndex);
+	b->SetTargetTileIndex(c.xTileIndex, c.yTileIndex);
+	a->targetIsSet = 1;
+	b->targetIsSet = 1;
+
+	a->targetVector = a->position2D - b->position2D;
+	b->targetVector = b->position2D - a->position2D;
+
+
+	//stopped here.. working on swap of tiles
+	
+}
+
 std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_float32 rot,t_float32 gap,t_int32 windex,t_int32 hindex, 
 	t_int32 isPlayable, t_int32 texture, drawLayer tag)
 {
@@ -241,9 +260,11 @@ std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_floa
 	go->SetPosition2D(pos.x,pos.y);
 	go->SetRotation2D(rot, 0);
 	go->SetScale2D((t_float32)xscale, (t_float32)yscale);
-	go->SetPlayable(isPlayable);
-	go->SetDrawLayer(tag);
-
+	go->isPlayable = isPlayable;
+	go->tag=tag;
+	go->selected=0;
+	go->SetTileIndex(windex, hindex);
+	
 	if(isPlayable)
 	{
 		go->SetTextureRef(textureResources[texture]);
@@ -542,12 +563,11 @@ void UpdateRender(float dt)
 	XMVECTOR mouseVector =DirectX::XMVector3Unproject(DirectX::XMVectorSet(mouseX, mouseY, 1,1), 0, 0, screenRect.x, screenRect.y, 0.1f, 100.0f, projMatrix, viewMatrix,DirectX::XMMatrixIdentity());
 	XMStoreFloat3(&mouseTemp, mouseVector);
 
-	int mousX = ((t_int32)(mouseTemp.x)+ mouseCursor->GetScale2D().x )/ mouseCursor->GetScale2D().x;
-	int mousY = VERTICALTILES/2 - (t_int32)(mouseTemp.y ) / mouseCursor->GetScale2D().y;
+	int mousX = ((t_int32)(mouseTemp.x)+ mouseCursor->scale2D.x )/ mouseCursor->scale2D.x;
+	int mousY = VERTICALTILES/2 - (t_int32)(mouseTemp.y ) / mouseCursor->scale2D.y;
 
 	if (mousX < 0)
 		mousX = 0;
-
 
 	if (mousX >= HORIZONTALTILES)
 		mousX = HORIZONTALTILES - 1;
@@ -561,11 +581,20 @@ void UpdateRender(float dt)
 	wsprintf(buffer, L"mousex: %d mousey %d X %d  Y %d   \n",  mouseX, mouseY, mousX, mousY);
 	OutputDebugString(buffer);
 
-
-	if (levelTiles[mousX][mousY]->IsPlayable())
+	if (levelTiles[mousX][mousY]->isPlayable)
 	{
-		FLOAT2 newMousCursorPos = PositionOnTile(mouseCursor->GetScale2D().x, mouseCursor->GetScale2D().y, 2, mousX, mousY);
+		FLOAT2 newMousCursorPos = PositionOnTile(mouseCursor->scale2D.x, mouseCursor->scale2D.y, 2, mousX, mousY);
 		mouseCursor->SetPosition2D(newMousCursorPos.x, newMousCursorPos.y);
+
+		if (mouseDown && !mouseWasDownLastFrame && selectedTile== nullptr)
+		{
+			selectedTile = levelTiles[mousX][mousY];
+			selectedTile->selected = 1;
+		}
+		else if (mouseDown && !mouseWasDownLastFrame && selectedTile != nullptr)
+		{
+			SwapTiles(selectedTile.get(), levelTiles[mousX][mousY].get());
+		}
 	}
 
 	//Update game object, and push to pipeline
@@ -573,18 +602,22 @@ void UpdateRender(float dt)
 	{
 		go->Update(dt);
 
-		FLOAT2 rot = go->GetRotation2D();
+		FLOAT2 rot = go->orientation2D;
 		XMMATRIX rotMatrix = DirectX::XMMatrixRotationZ(DirectX::XMConvertToRadians(rot.x));
 
-		FLOAT2 pos = go->GetPosition2D();
+
+		FLOAT2 pos = go->position2D;
 		XMFLOAT3 fl3 = DirectX::XMFLOAT3(pos.x, pos.y,0);
+		
+		
 		XMMATRIX transMatrix = DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&fl3));
 
-		FLOAT2 scale = go->GetScale2D();
+		FLOAT2 scale = go->scale2D;
 		XMFLOAT3 scal3 = XMFLOAT3(scale.x, scale.y, 0);
 		XMMATRIX scaleMatrix = DirectX::XMMatrixScalingFromVector(XMLoadFloat3(&scal3));
 		XMMATRIX finalMatrix = scaleMatrix *rotMatrix *transMatrix;
-
+	
+		buff.selected = go->selected;
 		finalMatrix *= viewMatrix* projMatrix;
 
 		DirectX::XMStoreFloat4x4(&buff.world, finalMatrix);
@@ -671,12 +704,18 @@ int WINAPI WinMain(HINSTANCE hInstance,
 				break;
 			}
 		}	
-		
+
 		mouseDown = 0;
+
 		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0)
 		{
 			mouseDown = 1;
 		}
+		else
+		{
+			mouseDown = 0;
+		}
+
 	
 		POINT mouse;
 		GetCursorPos(&mouse);
@@ -724,6 +763,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		
 		wchar_t buffer[256];
 		wsprintf(buffer, L"%dms  fps %d \n", MSPerFrame, fps);
+
+		mouseWasDownLastFrame = mouseDown;
+
 	//	OutputDebugString(buffer);
 	}
 	

@@ -13,13 +13,12 @@ gameObject::gameObject()
 	 texture = initTexture;
 }
 
-gameObject::gameObject(FLOAT2 initialPos2D, FLOAT2 initOrientation2D, FLOAT2 initScale2D, std::wstring initTexture)
+ gameObject::gameObject(FLOAT2 initialPos2D, FLOAT2 initOrientation2D, FLOAT2 initScale2D, std::wstring initTexture)
 {
 	position2D = initialPos2D;
 	orientation2D = initOrientation2D;
 	scale2D = initScale2D;
 	texture = initTexture;
-
 }
 
 gameObject::~gameObject()
@@ -30,6 +29,7 @@ void gameObject::SetPosition2D(t_float32 x, t_float32 y)
 {
 	position2D = FLOAT2(x, y);
 }
+
 void gameObject::SetRotation2D(t_float32 x, t_float32 y) {
 	
 	orientation2D = FLOAT2(x, y);
@@ -48,13 +48,7 @@ void gameObject::SetScale2D(t_float32 x, t_float32 y)
 	scale2D = FLOAT2(x, y);
 }
 
-void gameObject::SetTextureRef(std::wstring tex)
-{
-	texture = tex;
-}
-
 void gameObject::Update(t_float32 dt)
 {
-
 
 }
