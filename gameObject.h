@@ -17,6 +17,7 @@ public:
 	void SetScale2D(t_float32 x, t_float32 y);
 	void SetTextureRef(std::wstring tex);
 	
+	RECT GetBounds() { return boundingBox; }
 	FLOAT2 GetRotation2D() { return orientation2D; }
 	FLOAT2 GetPosition2D() { return position2D; }
 	FLOAT2 GetScale2D() { return scale2D; }
@@ -27,7 +28,7 @@ public:
 	void Update(t_float32 dt);
 
 private:
-	
+	RECT boundingBox;
 	FLOAT2 position2D;
 	FLOAT2 orientation2D;
 	FLOAT2 scale2D;

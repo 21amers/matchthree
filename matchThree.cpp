@@ -204,6 +204,7 @@ void LoadTextures()
 	}
 }
 
+
 FLOAT2 PositionOnTile(t_int32 xscale, t_int32 yscale, t_float32 gap, t_int32 windex, t_int32 hindex)
 {
 	if (windex < 0)
@@ -251,7 +252,6 @@ std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_floa
 	{
 		go->SetTextureRef(textureResources[2]);
 	}
-
 	
 	gameObjects.push_back(go);
 	return go;
@@ -542,19 +542,30 @@ void UpdateRender(float dt)
 	XMVECTOR mouseVector =DirectX::XMVector3Unproject(DirectX::XMVectorSet(mouseX, mouseY, 1,1), 0, 0, screenRect.x, screenRect.y, 0.1f, 100.0f, projMatrix, viewMatrix,DirectX::XMMatrixIdentity());
 	XMStoreFloat3(&mouseTemp, mouseVector);
 
+	int mousX = ((t_int32)(mouseTemp.x)+ mouseCursor->GetScale2D().x )/ mouseCursor->GetScale2D().x;
+	int mousY = VERTICALTILES/2 - (t_int32)(mouseTemp.y ) / mouseCursor->GetScale2D().y;
 
-	t_int32 mPosIndexX = clamp <t_int32>((t_int32)0, (t_int32)HORIZONTALTILES - 1, 0);
-	t_int32 mPosIndexY = clamp <t_int32>((t_int32)0, (t_int32)VERTICALTILES - 1, 0);
+	if (mousX < 0)
+		mousX = 0;
 
 
-	wsprintf(buffer, L"mousex: %d mousey %d X %d  Y %d   \n",  mouseX, mouseY, (t_int32)mouseTemp.x, (t_int32)mouseTemp.y);
+	if (mousX >= HORIZONTALTILES)
+		mousX = HORIZONTALTILES - 1;
+
+	if (mousY < 0)
+		mousY = 0;
+
+	if (mousY >= VERTICALTILES)
+		mousY = VERTICALTILES - 1;
+
+	wsprintf(buffer, L"mousex: %d mousey %d X %d  Y %d   \n",  mouseX, mouseY, mousX, mousY);
 	OutputDebugString(buffer);
 
 
-	if (levelTiles[mPosIndexX][mPosIndexY]->IsPlayable())
+	if (levelTiles[mousX][mousY]->IsPlayable())
 	{
-		FLOAT2 cursorPos = PositionOnTile((t_int32)mouseCursor->GetScale2D().x, (t_int32)mouseCursor->GetScale2D().y, 2.0f, mPosIndexX, mPosIndexY);
-		mouseCursor->SetPosition2D(cursorPos.x, cursorPos.y);
+		FLOAT2 newMousCursorPos = PositionOnTile(mouseCursor->GetScale2D().x, mouseCursor->GetScale2D().y, 2, mousX, mousY);
+		mouseCursor->SetPosition2D(newMousCursorPos.x, newMousCursorPos.y);
 	}
 
 	//Update game object, and push to pipeline
