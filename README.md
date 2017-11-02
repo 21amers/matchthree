@@ -1,11 +1,12 @@
 # matchthree
 Basic match-three clone
 
-My attempt at cloning the biggest money maker in casual gaming. Results may vary.   I'll do some blogging thing abou this on my website at some point soon. This is pretty early so far. 
+My attempt at cloning the biggest money maker in casual gaming. Results may vary.   I'll do some blogging thing about this on my website at some point soon. 
 
 The roadmap:
 
-* Currently does not support the Windows 10 screen scaling. Tested at 100% and 150%. 
+* Grid scaling based on screen size.
+* Capping window scale to specific aspect ratios
 * Game code separate from general game loop
 * Level loading code
 * click and move interaction
@@ -18,4 +19,5 @@ The roadmap:
 * funky issues with various resolutions and screensizes..will fix as I get there
 * Textures need to be moved to a spritesheet ( this will come later)
 * Animation support with sprite sheets and transformations. 
-* Sound at some point
+* Sound
+
