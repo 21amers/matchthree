@@ -2,6 +2,8 @@
 #include <d3d11.h>
 #include <string>
 #include <memory>
+#include <math.h>
+#include <DirectXMath.h>
 
 typedef  float  t_float32;
 typedef  double t_float64;
@@ -46,6 +48,7 @@ enum drawLayer
 	ui,
 };
 
+static FLOAT2 FLOAT2ZERO(0.0f, 0.0f);
 
 inline FLOAT2 operator+(FLOAT2 a, FLOAT2 b)
 {
@@ -57,6 +60,42 @@ inline FLOAT2 operator-(FLOAT2 a, FLOAT2 b)
 	return FLOAT2(a.x - b.x, a.y - b.y);
 }
 
+inline bool operator==(FLOAT2 a, FLOAT2 b)
+{
+	return a.x == b.x && a.y == b.y;
+}
+
+inline bool operator!=(FLOAT2 a, FLOAT2 b)
+{
+	return !(a == b);
+}
+
+inline FLOAT2 operator*(t_float32 a, FLOAT2 b)
+{
+	return FLOAT2(b.x * a, b.y * a);
+}
+
+
+inline t_float32 vectorMagnitude(FLOAT2 vec)
+{
+	return (t_float32) std::sqrt(vec.x * vec.x + vec.y*vec.y);
+}
+
+inline t_float32 vectorMagnitudeSquared(FLOAT2 vec)
+{
+	return vec.x * vec.x + vec.y*vec.y;
+}
+
+inline FLOAT2 normalized(FLOAT2 vector)
+{
+	float magnitude = vectorMagnitude(vector);
+	return FLOAT2(vector.x / magnitude, vector.y / magnitude);
+}
+
+inline FLOAT2 lerp(FLOAT2 start, FLOAT2 end, t_float32 prc)
+{
+	return (start + (prc *(end-start)));
+}
 
 //convert this to spritesheet
 static std::wstring textureResources[] =

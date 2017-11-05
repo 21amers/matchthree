@@ -23,6 +23,7 @@ public:
 
 	const wchar_t* GetTextureRef() { return texture.c_str(); }
 	
+
 	t_int32 xTileIndex;
 	t_int32 yTileIndex;
 

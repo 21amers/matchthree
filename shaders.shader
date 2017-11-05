@@ -28,8 +28,8 @@ VOut VShader(float4 position : POSITION, float4 normal : NORMAL, float2 texcord:
 	{
 		position.xyz *= 1.05f;
 		output.position = mul(finalMatrix, position);
-
 		output.color = ambientColor * 1.25f;
+		output.color.x += .25f;
 	}
 	else
 	{

@@ -129,6 +129,12 @@ LRESULT CALLBACK WindowProc(
 }
 
 
+bool zOrder(const std::shared_ptr<gameObject> left, const std::shared_ptr<gameObject> right)
+{
+	return left->tag < right->tag;
+}
+
+
 void ResizeBuffers(FLOAT2 screenSize)
 {
 	if (backBuffer)
@@ -234,21 +240,35 @@ FLOAT2 PositionOnTile(t_int32 xscale, t_int32 yscale, t_float32 gap, t_int32 win
 	return FLOAT2(leftSide + x + offset, top + y + yoffset);
 }
 
-void SwapTiles(gameObject *a, gameObject *b)
+void SwapTiles(std::shared_ptr<gameObject> a, std::shared_ptr<gameObject> b)
 {
-	gameObject c = *a;
+	gameObject c =*a.get();
 
 	a->SetTargetTileIndex(b->xTileIndex, b->yTileIndex);
 	b->SetTargetTileIndex(c.xTileIndex, c.yTileIndex);
+
 	a->targetIsSet = 1;
 	b->targetIsSet = 1;
 
-	a->targetVector = a->position2D - b->position2D;
-	b->targetVector = b->position2D - a->position2D;
+	a->targetVector = b->position2D - a->position2D;
+	b->targetVector = a->position2D - b->position2D;
 
-
-	//stopped here.. working on swap of tiles
+	//temporary swap
+	//move in Tile Object as well
 	
+
+	a->position2D = b->position2D;
+	a->yTileIndex = b->yTileIndex;
+	a->xTileIndex = b->xTileIndex;
+
+	b->position2D = c.position2D;
+	b->yTileIndex = c.yTileIndex;
+	b->xTileIndex = c.xTileIndex;
+
+	levelTiles[b->xTileIndex][b->yTileIndex] = b;
+	levelTiles[a->xTileIndex][a->yTileIndex] = a;
+
+
 }
 
 std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_float32 rot,t_float32 gap,t_int32 windex,t_int32 hindex, 
@@ -257,6 +277,7 @@ std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_floa
 	FLOAT2 pos = PositionOnTile(xscale, yscale, gap, windex, hindex);
 	
 	std::shared_ptr<gameObject> go = std::make_shared<gameObject>();
+	
 	go->SetPosition2D(pos.x,pos.y);
 	go->SetRotation2D(rot, 0);
 	go->SetScale2D((t_float32)xscale, (t_float32)yscale);
@@ -264,6 +285,11 @@ std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_floa
 	go->tag=tag;
 	go->selected=0;
 	go->SetTileIndex(windex, hindex);
+	go->targetIsSet = 0;
+	go->targetVector = FLOAT2ZERO;
+	go->targetxTileIndex = 0;
+	go->targetyTileindex = 0;
+	
 	
 	if(isPlayable)
 	{
@@ -308,6 +334,9 @@ void StartLevel()
 	mouseCursor->SetTextureRef(textureResources[4]);
 
 	gameObjects.push_back(mouseCursor);
+
+	//sort by z to help rend
+	std::sort(gameObjects.begin(), gameObjects.end(), zOrder);
 }
 
 void InitGraphics()
@@ -586,17 +615,44 @@ void UpdateRender(float dt)
 		FLOAT2 newMousCursorPos = PositionOnTile(mouseCursor->scale2D.x, mouseCursor->scale2D.y, 2, mousX, mousY);
 		mouseCursor->SetPosition2D(newMousCursorPos.x, newMousCursorPos.y);
 
-		if (mouseDown && !mouseWasDownLastFrame && selectedTile== nullptr)
+		if (mouseDown && !mouseWasDownLastFrame)
 		{
-			selectedTile = levelTiles[mousX][mousY];
-			selectedTile->selected = 1;
-		}
-		else if (mouseDown && !mouseWasDownLastFrame && selectedTile != nullptr)
-		{
-			SwapTiles(selectedTile.get(), levelTiles[mousX][mousY].get());
+			//if the clicked tile 
+			if (selectedTile != nullptr)
+			{
+				t_int32 xDist = abs(selectedTile->xTileIndex - mousX);
+				t_int32 yDist = abs(selectedTile->yTileIndex - mousY);
+
+				if (xDist > 1 || yDist > 1) // If its too far to be swapped then we're
+				{
+					selectedTile->selected = 0;
+					selectedTile = nullptr;
+					
+					selectedTile = levelTiles[mousX][mousY];
+					selectedTile->selected = 1;
+				}
+				else if (xDist == 0 && yDist == 0)
+				{
+					selectedTile->selected = 0;
+					selectedTile = nullptr;
+				}
+				else
+				{
+					SwapTiles(selectedTile, levelTiles[mousX][mousY]);
+
+					selectedTile->selected = 0;
+					selectedTile = nullptr;
+				}
+			}
+			else if (selectedTile == nullptr)
+			{
+				selectedTile = levelTiles[mousX][mousY];
+				selectedTile->selected = 1;
+			}
 		}
 	}
 
+	std::wstring lastTexture;
 	//Update game object, and push to pipeline
 	for (std::shared_ptr<gameObject> go : gameObjects)
 	{
@@ -608,7 +664,6 @@ void UpdateRender(float dt)
 
 		FLOAT2 pos = go->position2D;
 		XMFLOAT3 fl3 = DirectX::XMFLOAT3(pos.x, pos.y,0);
-		
 		
 		XMMATRIX transMatrix = DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&fl3));
 
@@ -623,8 +678,14 @@ void UpdateRender(float dt)
 		DirectX::XMStoreFloat4x4(&buff.world, finalMatrix);
 		DirectX::XMStoreFloat4x4(&buff.rotation, rotMatrix);
 		
-		//order the draw calls so that only texture change happens only at certain times
-		context->PSSetShaderResources(0, 1, &textures.at(go->GetTextureRef()));
+		//need to order by texture to eliminate the swap only when neede
+		/*if (lastTexture.compare(go->GetTextureRef())!=0)
+		{*/
+			//order the draw calls so that only texture change happens only at certain times
+			context->PSSetShaderResources(0, 1, &textures.at(go->GetTextureRef()));
+		//}
+
+		lastTexture = go->GetTextureRef();
 		context->UpdateSubresource(cBufferWorld, 0, 0, &buff, 0, 0);
 		context->DrawIndexed(6, 0, 0);
 	}
