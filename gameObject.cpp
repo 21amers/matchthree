@@ -50,5 +50,18 @@ void gameObject::SetScale2D(t_float32 x, t_float32 y)
 
 void gameObject::Update(t_float32 dt)
 {
+	if (targetIsSet) 
+	{
+		if (position2D!= targetVector)
+		{
+			position2D = lerp(position2D, targetVector, dt * .9f);
+		}
+		else
+		{
+			targetIsSet = 0;
+			targetVector = FLOAT2ZERO;
+		}
+
+	}
 
 }

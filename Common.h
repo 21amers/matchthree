@@ -33,6 +33,14 @@ struct FLOAT4
 
 };
 
+struct INT2
+{
+	t_int32 x, y;
+	INT2(t_int32 _x, t_int32 _y) : x(_x), y(_y) {}
+	INT2() = default;
+};
+
+
 struct VERTEX
 {
 	FLOAT3 position;
@@ -75,6 +83,11 @@ inline FLOAT2 operator*(t_float32 a, FLOAT2 b)
 	return FLOAT2(b.x * a, b.y * a);
 }
 
+inline FLOAT2 operator*(FLOAT2 a, t_float32 b)
+{
+	return FLOAT2(a.x * b, a.y * b);
+}
+
 
 inline t_float32 vectorMagnitude(FLOAT2 vec)
 {
@@ -96,6 +109,17 @@ inline FLOAT2 lerp(FLOAT2 start, FLOAT2 end, t_float32 prc)
 {
 	return (start + (prc *(end-start)));
 }
+
+inline t_float32 strongEaseOut(t_float32 t, t_float32 d)
+{
+	return 1.0f - pow(1 - (t / 2.0f), 5);
+}
+
+struct Animation
+{
+
+
+};
 
 //convert this to spritesheet
 static std::wstring textureResources[] =

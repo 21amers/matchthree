@@ -134,7 +134,6 @@ bool zOrder(const std::shared_ptr<gameObject> left, const std::shared_ptr<gameOb
 	return left->tag < right->tag;
 }
 
-
 void ResizeBuffers(FLOAT2 screenSize)
 {
 	if (backBuffer)
@@ -213,6 +212,27 @@ void LoadTextures()
 	}
 }
 
+INT2 FindTilePosition(t_float32 x, t_float32 y, t_float32 tileWidth, t_float32 tileHeight)
+{
+	t_int32 xIndex = ((t_int32)(x) + tileWidth) / tileWidth;
+	t_int32 yIndex = VERTICALTILES / 2 - (t_int32)(y) / tileHeight;
+
+	//cap the mouse index in case its outside of the grid to the grid bounds
+	if (xIndex < 0)
+		xIndex = 0;
+
+	if (xIndex >= HORIZONTALTILES)
+		xIndex = HORIZONTALTILES - 1;
+
+	if (yIndex < 0)
+		yIndex = 0;
+
+	if (yIndex >= VERTICALTILES)
+		yIndex = VERTICALTILES - 1;
+
+	return INT2(xIndex, yIndex);
+}
+
 FLOAT2 PositionOnTile(t_int32 xscale, t_int32 yscale, t_float32 gap, t_int32 windex, t_int32 hindex)
 {
 	if (windex < 0)
@@ -240,34 +260,20 @@ FLOAT2 PositionOnTile(t_int32 xscale, t_int32 yscale, t_float32 gap, t_int32 win
 	return FLOAT2(leftSide + x + offset, top + y + yoffset);
 }
 
-void SwapTiles(std::shared_ptr<gameObject> a, std::shared_ptr<gameObject> b)
+void SwapTiles(std::shared_ptr<gameObject> a, std::shared_ptr<gameObject> b, t_int32 newX, t_int32 newY)
 {
 	gameObject c =*a.get();
 
-	a->SetTargetTileIndex(b->xTileIndex, b->yTileIndex);
-	b->SetTargetTileIndex(c.xTileIndex, c.yTileIndex);
+	a->targetVector = b->position2D;
+	b->targetVector =a->position2D;
 
 	a->targetIsSet = 1;
 	b->targetIsSet = 1;
 
-	a->targetVector = b->position2D - a->position2D;
-	b->targetVector = a->position2D - b->position2D;
+	INT2 selectedIndex = FindTilePosition(a->position2D.x, a->position2D.y, a->scale2D.x, a->scale2D.y);
 
-	//temporary swap
-	//move in Tile Object as well
-	
-
-	a->position2D = b->position2D;
-	a->yTileIndex = b->yTileIndex;
-	a->xTileIndex = b->xTileIndex;
-
-	b->position2D = c.position2D;
-	b->yTileIndex = c.yTileIndex;
-	b->xTileIndex = c.xTileIndex;
-
-	levelTiles[b->xTileIndex][b->yTileIndex] = b;
-	levelTiles[a->xTileIndex][a->yTileIndex] = a;
-
+	levelTiles[newX][newY] = a;
+	levelTiles[selectedIndex.x][selectedIndex.y] = b;
 
 }
 
@@ -284,12 +290,13 @@ std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_floa
 	go->isPlayable = isPlayable;
 	go->tag=tag;
 	go->selected=0;
-	go->SetTileIndex(windex, hindex);
+//	go->SetTileIndex(windex, hindex);
 	go->targetIsSet = 0;
 	go->targetVector = FLOAT2ZERO;
-	go->targetxTileIndex = 0;
-	go->targetyTileindex = 0;
-	
+
+	//go->targetxTileIndex = 0;
+	//go->targetyTileindex = 0;
+	//
 	
 	if(isPlayable)
 	{
@@ -308,7 +315,7 @@ void StartLevel()
 {
 	t_int32 tileWidth = GRIDWIDTH / HORIZONTALTILES;
 	t_int32 tileHeight = GRIDHEIGHT / VERTICALTILES;
-	t_float32 gap = 2;
+	t_float32 gap = 2.0f;
 	
 	t_int32 levelSize = ARRAYSIZE(squareLevel);
 	t_int32 h, w;
@@ -332,7 +339,8 @@ void StartLevel()
 	mouseCursor->SetRotation2D(270, 0);
 	mouseCursor->SetScale2D((t_float32)tileWidth, (t_float32)tileHeight);
 	mouseCursor->SetTextureRef(textureResources[4]);
-
+	mouseCursor->targetIsSet = 0;
+	mouseCursor->targetVector = FLOAT2ZERO;
 	gameObjects.push_back(mouseCursor);
 
 	//sort by z to help rend
@@ -588,31 +596,33 @@ void UpdateRender(float dt)
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	XMFLOAT3 mouseTemp;
-	XMMATRIX world = DirectX::XMMatrixScaling(1.0f, 1.f, 1.f) * DirectX::XMMatrixRotationRollPitchYawFromVector(XMQuaternionIdentity()) * DirectX::XMMatrixIdentity();
 	XMVECTOR mouseVector =DirectX::XMVector3Unproject(DirectX::XMVectorSet(mouseX, mouseY, 1,1), 0, 0, screenRect.x, screenRect.y, 0.1f, 100.0f, projMatrix, viewMatrix,DirectX::XMMatrixIdentity());
 	XMStoreFloat3(&mouseTemp, mouseVector);
 
-	int mousX = ((t_int32)(mouseTemp.x)+ mouseCursor->scale2D.x )/ mouseCursor->scale2D.x;
-	int mousY = VERTICALTILES/2 - (t_int32)(mouseTemp.y ) / mouseCursor->scale2D.y;
+	//int mXIndx = ((t_int32)(mouseTemp.x)+ mouseCursor->scale2D.x )/ mouseCursor->scale2D.x;
+	//int mYIndx = VERTICALTILES/2 - (t_int32)(mouseTemp.y ) / mouseCursor->scale2D.y;
 
-	if (mousX < 0)
-		mousX = 0;
+	////cap the mouse index in case its outside of the grid to the grid bounds
+	//if (mXIndx < 0)
+	//	mXIndx = 0;
 
-	if (mousX >= HORIZONTALTILES)
-		mousX = HORIZONTALTILES - 1;
+	//if (mXIndx >= HORIZONTALTILES)
+	//	mXIndx = HORIZONTALTILES - 1;
 
-	if (mousY < 0)
-		mousY = 0;
+	//if (mYIndx < 0)
+	//	mYIndx = 0;
 
-	if (mousY >= VERTICALTILES)
-		mousY = VERTICALTILES - 1;
+	//if (mYIndx >= VERTICALTILES)
+	//	mYIndx = VERTICALTILES - 1;
 
-	wsprintf(buffer, L"mousex: %d mousey %d X %d  Y %d   \n",  mouseX, mouseY, mousX, mousY);
-	OutputDebugString(buffer);
+	//wsprintf(buffer, L"mousex: %d mousey %d X %d  Y %d   \n",  mouseX, mouseY, mXIndx, mYIndx);
+	//OutputDebugString(buffer);
 
-	if (levelTiles[mousX][mousY]->isPlayable)
+	INT2 mouseIndex = FindTilePosition(mouseTemp.x, mouseTemp.y, mouseCursor->scale2D.x, mouseCursor->scale2D.y);
+
+	if (levelTiles[mouseIndex.x][mouseIndex.y]->isPlayable)
 	{
-		FLOAT2 newMousCursorPos = PositionOnTile(mouseCursor->scale2D.x, mouseCursor->scale2D.y, 2, mousX, mousY);
+		FLOAT2 newMousCursorPos = PositionOnTile(mouseCursor->scale2D.x, mouseCursor->scale2D.y, 2, mouseIndex.x, mouseIndex.y);
 		mouseCursor->SetPosition2D(newMousCursorPos.x, newMousCursorPos.y);
 
 		if (mouseDown && !mouseWasDownLastFrame)
@@ -620,15 +630,18 @@ void UpdateRender(float dt)
 			//if the clicked tile 
 			if (selectedTile != nullptr)
 			{
-				t_int32 xDist = abs(selectedTile->xTileIndex - mousX);
-				t_int32 yDist = abs(selectedTile->yTileIndex - mousY);
+				INT2 selectedTileIndex = FindTilePosition(selectedTile->position2D.x, selectedTile->position2D.y, selectedTile->scale2D.x, selectedTile->scale2D.y);
+				
+				t_int32 xDist = abs(selectedTileIndex.x - mouseIndex.x);
+				t_int32 yDist = abs(selectedTileIndex.y - mouseIndex.y);
 
-				if (xDist > 1 || yDist > 1) // If its too far to be swapped then we're
+				// If its too far to be swapped then we're just selecting another one
+				if (xDist > 1 || yDist > 1) 
 				{
 					selectedTile->selected = 0;
 					selectedTile = nullptr;
 					
-					selectedTile = levelTiles[mousX][mousY];
+					selectedTile = levelTiles[mouseIndex.x][mouseIndex.y];
 					selectedTile->selected = 1;
 				}
 				else if (xDist == 0 && yDist == 0)
@@ -638,7 +651,7 @@ void UpdateRender(float dt)
 				}
 				else
 				{
-					SwapTiles(selectedTile, levelTiles[mousX][mousY]);
+					SwapTiles(selectedTile, levelTiles[mouseIndex.x][mouseIndex.y],mouseIndex.x,mouseIndex.y);
 
 					selectedTile->selected = 0;
 					selectedTile = nullptr;
@@ -646,7 +659,7 @@ void UpdateRender(float dt)
 			}
 			else if (selectedTile == nullptr)
 			{
-				selectedTile = levelTiles[mousX][mousY];
+				selectedTile = levelTiles[mouseIndex.x][mouseIndex.y];
 				selectedTile->selected = 1;
 			}
 		}
@@ -660,7 +673,6 @@ void UpdateRender(float dt)
 
 		FLOAT2 rot = go->orientation2D;
 		XMMATRIX rotMatrix = DirectX::XMMatrixRotationZ(DirectX::XMConvertToRadians(rot.x));
-
 
 		FLOAT2 pos = go->position2D;
 		XMFLOAT3 fl3 = DirectX::XMFLOAT3(pos.x, pos.y,0);
