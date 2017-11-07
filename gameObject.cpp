@@ -3,17 +3,19 @@
 
 gameObject::gameObject()
 {
+	//animator = std::make_unique<Animator>();
 }
 
- gameObject::gameObject(FLOAT3 initialPos, FLOAT3 initOrientation, FLOAT3 initScale, std::wstring initTexture) 
+gameObject::gameObject(FLOAT3 initialPos, FLOAT3 initOrientation, FLOAT3 initScale, std::wstring initTexture) : gameObject()
 {
 	 position = initialPos;
 	 orientation = initOrientation;
 	 scale = initScale;
 	 texture = initTexture;
+	
 }
 
- gameObject::gameObject(FLOAT2 initialPos2D, FLOAT2 initOrientation2D, FLOAT2 initScale2D, std::wstring initTexture)
+ gameObject::gameObject(FLOAT2 initialPos2D, FLOAT2 initOrientation2D, FLOAT2 initScale2D, std::wstring initTexture) : gameObject()
 {
 	position2D = initialPos2D;
 	orientation2D = initOrientation2D;
@@ -48,11 +50,17 @@ void gameObject::SetScale2D(t_float32 x, t_float32 y)
 	scale2D = FLOAT2(x, y);
 }
 
+t_float32 currentDelay = 0;
 void gameObject::Update(t_float32 dt)
 {
-	if (targetIsSet) 
+	if (targetIsSet)
 	{
-		if (position2D!= targetVector)
+		if (animationDelay >= currentDelay)
+		{
+			currentDelay += dt;
+			return;
+		}
+		if (position2D != targetVector)
 		{
 			position2D = lerp(position2D, targetVector, dt * .9f);
 		}
@@ -60,8 +68,7 @@ void gameObject::Update(t_float32 dt)
 		{
 			targetIsSet = 0;
 			targetVector = FLOAT2ZERO;
+			currentDelay = 0;
 		}
-
 	}
-
 }

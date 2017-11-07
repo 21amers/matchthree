@@ -262,7 +262,7 @@ FLOAT2 PositionOnTile(t_int32 xscale, t_int32 yscale, t_float32 gap, t_int32 win
 
 void SwapTiles(std::shared_ptr<gameObject> a, std::shared_ptr<gameObject> b, t_int32 newX, t_int32 newY)
 {
-	gameObject c =*a.get();
+	gameObject c = *a.get();
 
 	a->targetVector = b->position2D;
 	b->targetVector =a->position2D;
@@ -277,28 +277,31 @@ void SwapTiles(std::shared_ptr<gameObject> a, std::shared_ptr<gameObject> b, t_i
 
 }
 
-std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_float32 rot,t_float32 gap,t_int32 windex,t_int32 hindex, 
+void RunDropAnimation(std::shared_ptr<gameObject> go, t_int32 xTargetIndex, t_int32 yTargetIndex)
+{
+	go->isPlayable = false;
+	go->targetIsSet = true;
+	go->targetVector = PositionOnTile(go->scale2D.x, go->scale2D.y, 2, xTargetIndex, yTargetIndex);
+}
+
+std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_float32 rot, t_float32 gap, t_int32 windex, t_int32 hindex,
 	t_int32 isPlayable, t_int32 texture, drawLayer tag)
 {
 	FLOAT2 pos = PositionOnTile(xscale, yscale, gap, windex, hindex);
-	
+
 	std::shared_ptr<gameObject> go = std::make_shared<gameObject>();
-	
-	go->SetPosition2D(pos.x,pos.y);
-	go->SetRotation2D(rot, 0);
-	go->SetScale2D((t_float32)xscale, (t_float32)yscale);
-	go->isPlayable = isPlayable;
-	go->tag=tag;
-	go->selected=0;
-//	go->SetTileIndex(windex, hindex);
+
+	go->SetPosition2D(pos.x, pos.y);
 	go->targetIsSet = 0;
 	go->targetVector = FLOAT2ZERO;
 
-	//go->targetxTileIndex = 0;
-	//go->targetyTileindex = 0;
-	//
-	
-	if(isPlayable)
+	go->SetRotation2D(rot, 0);
+	go->SetScale2D((t_float32)xscale, (t_float32)yscale);
+	go->isPlayable = isPlayable;
+	go->tag = tag;
+	go->selected = 0;
+
+	if (isPlayable)
 	{
 		go->SetTextureRef(textureResources[texture]);
 	}
@@ -306,7 +309,7 @@ std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_floa
 	{
 		go->SetTextureRef(textureResources[2]);
 	}
-	
+
 	gameObjects.push_back(go);
 	return go;
 }
@@ -325,14 +328,18 @@ void StartLevel()
 		w = i % 8;
 		h = i / 8;
 
-		//Add grid tile
-		AddGameObject(tileWidth, tileHeight, 0.0f, gap, w, h, hourglassLevel[i], (w + h) % 2, drawLayer::grid);
-
+		if (hourglassLevel[i] != 0)
+		{
+			//Add grid tile
+			AddGameObject(tileWidth, tileHeight, 0.0f, gap, w, h, hourglassLevel[i], (w + h) % 2, drawLayer::grid);
+		}
+		
 		///add game tile
 		std::shared_ptr<gameObject> go = AddGameObject(tileWidth, tileHeight, 270.0f, gap, w, h, hourglassLevel[i], (w + h) % 5 + 5, drawLayer::go);
 		levelTiles[w][h] = go;
 	}
 	
+
 	FLOAT2 cursorPos = PositionOnTile(tileHeight, tileHeight, gap, 0, 0);
 	mouseCursor = std::make_shared<gameObject>();
 	mouseCursor->SetPosition2D(cursorPos.x, cursorPos.y);
@@ -345,6 +352,20 @@ void StartLevel()
 
 	//sort by z to help rend
 	std::sort(gameObjects.begin(), gameObjects.end(), zOrder);
+
+	for (t_int32 i = 0; i < VERTICALTILES; ++i)
+	{
+		for (t_int32 o = HORIZONTALTILES-1; o>=0; --o)
+		{
+			gameObject *go = levelTiles[i][o].get();
+
+			go->targetIsSet = 1;
+			go->targetVector = go->position2D;
+			go->position2D = FLOAT2(go->position2D.x, GRIDHEIGHT / 2 + go->scale2D.y*2);
+			go->animationDelay =( 7-i);
+		}
+	}
+	//Need to schedule animation here:::: for drop down 
 }
 
 void InitGraphics()
@@ -598,25 +619,6 @@ void UpdateRender(float dt)
 	XMFLOAT3 mouseTemp;
 	XMVECTOR mouseVector =DirectX::XMVector3Unproject(DirectX::XMVectorSet(mouseX, mouseY, 1,1), 0, 0, screenRect.x, screenRect.y, 0.1f, 100.0f, projMatrix, viewMatrix,DirectX::XMMatrixIdentity());
 	XMStoreFloat3(&mouseTemp, mouseVector);
-
-	//int mXIndx = ((t_int32)(mouseTemp.x)+ mouseCursor->scale2D.x )/ mouseCursor->scale2D.x;
-	//int mYIndx = VERTICALTILES/2 - (t_int32)(mouseTemp.y ) / mouseCursor->scale2D.y;
-
-	////cap the mouse index in case its outside of the grid to the grid bounds
-	//if (mXIndx < 0)
-	//	mXIndx = 0;
-
-	//if (mXIndx >= HORIZONTALTILES)
-	//	mXIndx = HORIZONTALTILES - 1;
-
-	//if (mYIndx < 0)
-	//	mYIndx = 0;
-
-	//if (mYIndx >= VERTICALTILES)
-	//	mYIndx = VERTICALTILES - 1;
-
-	//wsprintf(buffer, L"mousex: %d mousey %d X %d  Y %d   \n",  mouseX, mouseY, mXIndx, mYIndx);
-	//OutputDebugString(buffer);
 
 	INT2 mouseIndex = FindTilePosition(mouseTemp.x, mouseTemp.y, mouseCursor->scale2D.x, mouseCursor->scale2D.y);
 

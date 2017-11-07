@@ -12,6 +12,8 @@ typedef  int    t_int32;
 typedef  long   t_int64;
 typedef  UINT   t_uint32;
 
+
+
 struct FLOAT2
 {
 	t_float32 x, y;
@@ -115,11 +117,27 @@ inline t_float32 strongEaseOut(t_float32 t, t_float32 d)
 	return 1.0f - pow(1 - (t / 2.0f), 5);
 }
 
+static enum animationType
+{
+	spriteSheet,
+	transformation,
+	rotation,
+	scale,
+	custom
+};
+
+typedef void (*animation)(FLOAT2 target);
+//typedef void(*animation)(t_float32 rotationTarget);
+
+
 struct Animation
 {
-
+	animation *animRunner;
+	
 
 };
+
+
 
 //convert this to spritesheet
 static std::wstring textureResources[] =
