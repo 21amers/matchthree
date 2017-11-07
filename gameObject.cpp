@@ -6,21 +6,21 @@ gameObject::gameObject()
 	//animator = std::make_unique<Animator>();
 }
 
-gameObject::gameObject(FLOAT3 initialPos, FLOAT3 initOrientation, FLOAT3 initScale, std::wstring initTexture) : gameObject()
+gameObject::gameObject(FLOAT3 initialPos, FLOAT3 initOrientation, FLOAT3 initScale, tile tl) : gameObject()
 {
 	 position = initialPos;
 	 orientation = initOrientation;
 	 scale = initScale;
-	 texture = initTexture;
+	 objectTile = tl;
 	
 }
 
- gameObject::gameObject(FLOAT2 initialPos2D, FLOAT2 initOrientation2D, FLOAT2 initScale2D, std::wstring initTexture) : gameObject()
+ gameObject::gameObject(FLOAT2 initialPos2D, FLOAT2 initOrientation2D, FLOAT2 initScale2D, tile tl) : gameObject()
 {
 	position2D = initialPos2D;
 	orientation2D = initOrientation2D;
 	scale2D = initScale2D;
-	texture = initTexture;
+	objectTile = tl;
 }
 
 gameObject::~gameObject()

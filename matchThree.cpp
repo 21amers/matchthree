@@ -203,11 +203,11 @@ void LoadTextures()
 	for (t_int32 i = 0; i < textureLeng; ++i)
 	{
 		ID3D11ShaderResourceView *newTex;
-		HRESULT r = DirectX::CreateWICTextureFromFile(device, context, textureResources[i].c_str(), nullptr, &newTex);
+		HRESULT r = DirectX::CreateWICTextureFromFile(device, context, textureResources[i].textureResource.c_str(), nullptr, &newTex);
 
 		if (SUCCEEDED(r))
 		{
-			textures.insert(std::make_pair(textureResources[i], newTex));
+			textures.insert(std::make_pair(textureResources[i].Id, newTex));
 		}
 	}
 }
@@ -303,11 +303,11 @@ std::shared_ptr<gameObject> AddGameObject(t_int32 xscale, t_int32 yscale, t_floa
 
 	if (isPlayable)
 	{
-		go->SetTextureRef(textureResources[texture]);
+		go->SetTileRef(textureResources[texture]);
 	}
 	else
 	{
-		go->SetTextureRef(textureResources[2]);
+		go->SetTileRef(textureResources[2]);
 	}
 
 	gameObjects.push_back(go);
@@ -345,7 +345,7 @@ void StartLevel()
 	mouseCursor->SetPosition2D(cursorPos.x, cursorPos.y);
 	mouseCursor->SetRotation2D(270, 0);
 	mouseCursor->SetScale2D((t_float32)tileWidth, (t_float32)tileHeight);
-	mouseCursor->SetTextureRef(textureResources[4]);
+	mouseCursor->SetTileRef(textureResources[4]);
 	mouseCursor->targetIsSet = 0;
 	mouseCursor->targetVector = FLOAT2ZERO;
 	gameObjects.push_back(mouseCursor);
@@ -365,7 +365,20 @@ void StartLevel()
 			go->animationDelay =( 7-i);
 		}
 	}
-	//Need to schedule animation here:::: for drop down 
+}
+
+void DiscoverSolutions()
+{
+	for (t_int32 o = VERTICALTILES - 1; o >= 0; --o)
+	{
+		for (t_int32 i = HORIZONTALTILES - 1; i >= 0; --i)
+		{
+			gameObject *go = levelTiles[o][i].get();
+			
+
+		}
+
+	}
 }
 
 void InitGraphics()

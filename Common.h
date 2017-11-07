@@ -12,8 +12,6 @@ typedef  int    t_int32;
 typedef  long   t_int64;
 typedef  UINT   t_uint32;
 
-
-
 struct FLOAT2
 {
 	t_float32 x, y;
@@ -42,12 +40,21 @@ struct INT2
 	INT2() = default;
 };
 
-
 struct VERTEX
 {
 	FLOAT3 position;
 	FLOAT3 normal;
 	FLOAT2 uv;
+};
+
+enum tileType
+{
+	diamond,
+	square,
+	triangle,
+	circle,
+	dummy
+
 };
 
 enum drawLayer
@@ -58,6 +65,7 @@ enum drawLayer
 	ui,
 };
 
+// Vector functions
 static FLOAT2 FLOAT2ZERO(0.0f, 0.0f);
 
 inline FLOAT2 operator+(FLOAT2 a, FLOAT2 b)
@@ -90,7 +98,6 @@ inline FLOAT2 operator*(FLOAT2 a, t_float32 b)
 	return FLOAT2(a.x * b, a.y * b);
 }
 
-
 inline t_float32 vectorMagnitude(FLOAT2 vec)
 {
 	return (t_float32) std::sqrt(vec.x * vec.x + vec.y*vec.y);
@@ -117,45 +124,33 @@ inline t_float32 strongEaseOut(t_float32 t, t_float32 d)
 	return 1.0f - pow(1 - (t / 2.0f), 5);
 }
 
-static enum animationType
+struct tile
 {
-	spriteSheet,
-	transformation,
-	rotation,
-	scale,
-	custom
+	tile(std::wstring id, const std::wstring &texture, tileType tt, t_int32 isplayable) : Id(id) , textureResource(texture), tileType(tt), isPlayable(isplayable) {}
+	tile() = default;
+
+	std::wstring Id;
+	std::wstring textureResource;
+	tileType tileType;
+	t_int32 isPlayable;
 };
-
-typedef void (*animation)(FLOAT2 target);
-//typedef void(*animation)(t_float32 rotationTarget);
-
-
-struct Animation
-{
-	animation *animRunner;
-	
-
-};
-
-
 
 //convert this to spritesheet
-static std::wstring textureResources[] =
+static tile textureResources[] =
 {
-	L"images/bk1.png", //background
-	L"images/bk2.png",
-	L"images/bk3.png",
-	L"images/bk4.png",
+	tile(L"0",L"images/bk1.png",tileType::dummy, 0), //background
+	tile(L"1",L"images/bk2.png",tileType::dummy, 0),
+	tile(L"2",L"images/bk3.png",tileType::dummy, 0),
 
-	//--
-	L"images/cursor.png", //mouse cursor
-	L"images/cir.png", //textures
-	L"images/dmnd.png",
-	L"images/rect.png",
-	L"images/tri.png",
-	L"images/hrt.png"
+	tile(L"3",L"images/bk4.png",tileType::dummy, 0),
+	tile(L"4",L"images/cursor.png",tileType::dummy, 0),
+
+	tile(L"5",L"images/cir.png",tileType::dummy, 1),
+	tile(L"6",L"images/dmnd.png",tileType::dummy, 1),
+	tile(L"7",L"images/rect.png",tileType::dummy, 1),
+	tile(L"8",L"images/tri.png",tileType::dummy, 1),
+	tile(L"9",L"images/hrt.png",tileType::dummy, 1),
 };
-
 
 //Index buffer
 static DWORD spriteIndices[] =
@@ -187,3 +182,21 @@ template<typename T> T clamp(T min, T max, T value)
 static t_int32 squareLevel[64] = { 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
 static t_int32 hourglassLevel[64] = { 1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,0,1,1,1,1,1,1,0,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,0,1,1,1,1,0,1,0,1,1,1,1,1,1,0 };
 static t_int32 randomLevel[64] = { 1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1 };
+
+
+//static enum animationType
+//{
+//	spriteSheet,
+//	transformation,
+//	rotation,
+//	scale,
+//	custom
+//};
+//
+//typedef void (*animation)(FLOAT2 target);
+////typedef void(*animation)(t_float32 rotationTarget);
+//
+//struct Animation
+//{
+//	animation *animRunner;
+//};

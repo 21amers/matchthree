@@ -9,18 +9,18 @@ class gameObject
 {
 public:
 	gameObject();
-	gameObject(FLOAT3 initialPos, FLOAT3 initOrientation, FLOAT3 scale, std::wstring texture);
-	gameObject(FLOAT2 initialPos2D, FLOAT2 initOrientation2D, FLOAT2 scale2D, std::wstring texture);
+	gameObject(FLOAT3 initialPos, FLOAT3 initOrientation, FLOAT3 scale, tile tl);
+	gameObject(FLOAT2 initialPos2D, FLOAT2 initOrientation2D, FLOAT2 scale2D, tile tl);
 	~gameObject();
 
 	void SetPosition2D(t_float32 x, t_float32 y);
 	void SetRotation2D(t_float32 x, t_float32 y);
 	void SetScale2D(t_float32 x, t_float32 y);
 	
-	void SetTextureRef(std::wstring tex) { texture = tex; };
+	void SetTileRef(tile tl) { objectTile = tl; };
 	void Update(t_float32 dt);
 
-	const wchar_t* GetTextureRef() { return texture.c_str(); }
+	const wchar_t* GetTextureRef() { return objectTile.Id.c_str(); }
 	
 	//Svoid SetAnimation();
 	t_float32 animationDelay;
@@ -32,7 +32,7 @@ public:
 	t_int32 zposition;
 
 	drawLayer tag;
-	std::wstring texture;
+	tile objectTile;
 
 	FLOAT2 orientation2D;
 	FLOAT2 scale2D;
